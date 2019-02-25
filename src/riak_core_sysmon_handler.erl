@@ -85,12 +85,12 @@ handle_event({monitor, Pid, Type, _Info},
     NewTimerRef = reset_timer(TimerRef),
     maybe_collect_garbage(Type),
     {ok, State#state{timer_ref=NewTimerRef}};
-handle_event({monitor, PidOrPort, Type, Info}, State=#state{timer_ref=TimerRef}) ->
+handle_event({monitor, _PidOrPort, _Type, _Info}, State=#state{timer_ref=TimerRef}) ->
     %% Reset the inactivity timeout
     NewTimerRef = reset_timer(TimerRef),
-    {Fmt, Args} = format_pretty_proc_or_port_info(PidOrPort, almost_current_function),
-    lager:info("monitor ~w ~w "++ Fmt ++ " ~w",
-                          [Type, PidOrPort] ++ Args ++ [Info]),
+    %{Fmt, Args} = format_pretty_proc_or_port_info(PidOrPort, almost_current_function),
+    %lager:info("monitor ~w ~w "++ Fmt ++ " ~w",
+    %                      [Type, PidOrPort] ++ Args ++ [Info]),
     {ok, State#state{timer_ref=NewTimerRef}};
 handle_event(Event, State=#state{timer_ref=TimerRef}) ->
     NewTimerRef = reset_timer(TimerRef),
@@ -171,74 +171,74 @@ code_change(_OldVsn, State, _Extra) ->
 %% format_pretty_proc_info(Pid) ->
 %%     format_pretty_proc_info(Pid, current_function).
 
--ifndef('21.0').
-format_pretty_proc_or_port_info(PidOrPort, Acf) ->
-    try
-        case get_pretty_proc_or_port_info(PidOrPort, Acf) of
-            undefined ->
-                {"", []};
-            Res ->
-                Res
-        end
-    catch X:Y ->
-        {"Pid ~w, ~W ~W at ~w\n",
-            [PidOrPort, X, 20, Y, 20, erlang:get_stacktrace()]}
-    end.
--else.
-format_pretty_proc_or_port_info(PidOrPort, Acf) ->
-    try
-        case get_pretty_proc_or_port_info(PidOrPort, Acf) of
-            undefined ->
-                {"", []};
-            Res ->
-                Res
-        end
-    catch X:Y:Stack ->
-            {"Pid ~w, ~W ~W at ~w\n",
-             [PidOrPort, X, 20, Y, 20, Stack]}
-    end.
--endif.
-
-%% Enabling warnings_as_errors prevents a build since this function is
-%% dead code. To be safe, commenting out rather than deleting.
-%% get_pretty_proc_info(Pid) ->
-%%     get_pretty_proc_info(Pid, current_function).
-
-get_pretty_proc_or_port_info(Pid, Acf) when is_pid(Pid) ->
-    case process_info(Pid, [registered_name, initial_call, current_function,
-                            message_queue_len]) of
-        undefined ->
-            undefined;
-        [] ->
-            undefined;
-        [{registered_name, RN0}, ICT1, {_, CF}, {_, MQL}] ->
-            ICT = case proc_lib:translate_initial_call(Pid) of
-                     {proc_lib, init_p, 5} ->   % not by proc_lib, see docs
-                         ICT1;
-                     ICT2 ->
-                         {initial_call, ICT2}
-                 end,
-            RNL = if RN0 == [] -> [];
-                     true      -> [{name, RN0}]
-                  end,
-            {"~w", [RNL ++ [ICT, {Acf, CF}, {message_queue_len, MQL}]]}
-    end;
-get_pretty_proc_or_port_info(Port, _Acf) when is_port(Port) ->
-    PortInfo = erlang:port_info(Port),
-    {value, {name, Name}, PortInfo2} = lists:keytake(name, 1, PortInfo),
-    QueueSize = [erlang:port_info(Port, queue_size)],
-    Connected = case proplists:get_value(connected, PortInfo2) of
-                    undefined ->
-                        [];
-                    ConnectedPid ->
-                        case proc_lib:translate_initial_call(ConnectedPid) of
-                            {proc_lib, init_p, 5} ->   % not by proc_lib, see docs
-                                [];
-                            ICT ->
-                                [{initial_call, ICT}]
-                        end
-                end,
-    {"name ~s ~w", [Name, lists:append([PortInfo2, QueueSize, Connected])]}.
+%-ifndef('21.0').
+%format_pretty_proc_or_port_info(PidOrPort, Acf) ->
+%    try
+%        case get_pretty_proc_or_port_info(PidOrPort, Acf) of
+%            undefined ->
+%                {"", []};
+%            Res ->
+%                Res
+%        end
+%    catch X:Y ->
+%        {"Pid ~w, ~W ~W at ~w\n",
+%            [PidOrPort, X, 20, Y, 20, erlang:get_stacktrace()]}
+%    end.
+%-else.
+%format_pretty_proc_or_port_info(PidOrPort, Acf) ->
+%    try
+%        case get_pretty_proc_or_port_info(PidOrPort, Acf) of
+%            undefined ->
+%                {"", []};
+%            Res ->
+%                Res
+%        end
+%    catch X:Y:Stack ->
+%            {"Pid ~w, ~W ~W at ~w\n",
+%             [PidOrPort, X, 20, Y, 20, Stack]}
+%    end.
+%-endif.
+%
+%%% Enabling warnings_as_errors prevents a build since this function is
+%%% dead code. To be safe, commenting out rather than deleting.
+%%% get_pretty_proc_info(Pid) ->
+%%%     get_pretty_proc_info(Pid, current_function).
+%
+%get_pretty_proc_or_port_info(Pid, Acf) when is_pid(Pid) ->
+%    case process_info(Pid, [registered_name, initial_call, current_function,
+%                            message_queue_len]) of
+%        undefined ->
+%            undefined;
+%        [] ->
+%            undefined;
+%        [{registered_name, RN0}, ICT1, {_, CF}, {_, MQL}] ->
+%            ICT = case proc_lib:translate_initial_call(Pid) of
+%                     {proc_lib, init_p, 5} ->   % not by proc_lib, see docs
+%                         ICT1;
+%                     ICT2 ->
+%                         {initial_call, ICT2}
+%                 end,
+%            RNL = if RN0 == [] -> [];
+%                     true      -> [{name, RN0}]
+%                  end,
+%            {"~w", [RNL ++ [ICT, {Acf, CF}, {message_queue_len, MQL}]]}
+%    end;
+%get_pretty_proc_or_port_info(Port, _Acf) when is_port(Port) ->
+%    PortInfo = erlang:port_info(Port),
+%    {value, {name, Name}, PortInfo2} = lists:keytake(name, 1, PortInfo),
+%    QueueSize = [erlang:port_info(Port, queue_size)],
+%    Connected = case proplists:get_value(connected, PortInfo2) of
+%                    undefined ->
+%                        [];
+%                    ConnectedPid ->
+%                        case proc_lib:translate_initial_call(ConnectedPid) of
+%                            {proc_lib, init_p, 5} ->   % not by proc_lib, see docs
+%                                [];
+%                            ICT ->
+%                                [{initial_call, ICT}]
+%                        end
+%                end,
+%    {"name ~s ~w", [Name, lists:append([PortInfo2, QueueSize, Connected])]}.
 
 
 %% @doc If the message type is due to a large heap warning
