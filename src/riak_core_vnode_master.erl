@@ -32,7 +32,7 @@
          sync_command/3, sync_command/4,
          coverage/5,
          command_return_vnode/4,
-         sync_spawn_command/3, make_request/3,
+         sync_spawn_command/3, sync_spawn_command/4, make_request/3,
          make_coverage_request/4, all_nodes/1, reg_name/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
@@ -148,6 +148,14 @@ sync_command({Index,Node}, Msg, VMaster, Timeout) ->
 sync_spawn_command({Index,Node}, Msg, VMaster) ->
     Request = make_request(Msg, {server, undefined, undefined}, Index),
     case gen_server:call({VMaster, Node}, {spawn, Request}, infinity) of
+        {vnode_error, {Error, _Args}} -> error(Error);
+        {vnode_error, Error} -> error(Error);
+        Else -> Else
+    end.
+
+sync_spawn_command({Index,Node}, Msg, VMaster, Timeout) ->
+    Request = make_request(Msg, {server, undefined, undefined}, Index),
+    case gen_server:call({VMaster, Node}, {spawn, Request}, Timeout) of
         {vnode_error, {Error, _Args}} -> error(Error);
         {vnode_error, Error} -> error(Error);
         Else -> Else
